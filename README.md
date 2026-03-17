@@ -10,8 +10,22 @@ A PowerShell script that reads Windows event logs, sends them to a local LLM, an
 
 ## Usage
 
+**CLI mode** — prints a structured report to the terminal:
+
 ```powershell
 .\winsyscheck.ps1
+```
+
+**Web UI mode** — serves a browser-based dashboard (default port: 8888, configurable with `-Port`):
+
+```powershell
+.\winsyscheck.ps1 -Web
+```
+
+The browser opens automatically. Press **START CHECK** to run the analysis. Results appear category by category as each LLM response finishes. Use a custom port with `-Port`:
+
+```powershell
+.\winsyscheck.ps1 -Web -Port 9000
 ```
 
 > Run as Administrator to ensure access to all event logs, including the Security log.
@@ -58,6 +72,17 @@ The script queries the following event log categories in order of importance:
 | 6 | Performance | Slow boot/shutdown, WMI instability |
 | 7 | Antivirus & Defense | Windows Defender alerts and failures |
 | 8 | Updates & Tasks | Windows Update, BITS transfer, and scheduled task failures |
+
+## Web UI
+
+The web interface requires no additional tools — it is served directly by the script using .NET's built-in `HttpListener`.
+
+- The **header** shows the machine name, OS, CPU, RAM, and the name of the currently loaded LLM model (or an offline indicator if the server is unreachable)
+- Each of the 8 categories is shown as a collapsible section, collapsed by default
+- Sections expand automatically when their result arrives
+- The category title and left accent bar reflect the **highest severity** found: red for CRITICAL, orange for HIGH, yellow for MEDIUM, blue for LOW, green for clean
+- Individual issues are displayed with severity badge, timestamp, source, description, and recommended action
+- Click **RUN AGAIN** to re-run the full check without restarting the server
 
 ## Report format
 
