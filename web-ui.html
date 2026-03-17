@@ -154,12 +154,104 @@ h1 { font-size: 1.25rem; font-weight: 600; color: #58a6ff; letter-spacing: .3px;
 .sev-LOW      { background: #0f1f3d; color: #388bfd; }
 
 .issue-meta   { font-size: 0.73rem; color: #484f58; line-height: 1.4; margin-bottom: 6px; }
+.issue-time   { font-size: 0.68rem; color: #484f58; margin-left: auto; white-space: nowrap; }
 .issue-desc   { font-size: 0.82rem; color: #c9d1d9; line-height: 1.5; margin-bottom: 5px; }
 .issue-action { font-size: 0.78rem; color: #58a6ff; line-height: 1.4; }
 .issue-action::before { content: "→ "; }
 
 .clean-msg { color: #3fb950; font-size: 0.82rem; padding: 4px 0; }
 .error-msg { color: #8b5cf6; font-size: 0.82rem; padding: 4px 0; white-space: pre-wrap; word-break: break-word; }
+
+.ask-btns { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+.ask-btn {
+    background: #21262d;
+    color: #8b949e;
+    border: 1px solid #30363d;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.71rem;
+    cursor: pointer;
+    transition: background .15s, color .15s, border-color .15s;
+}
+.ask-btn:hover:not(:disabled) { background: #30363d; color: #c9d1d9; border-color: #484f58; }
+.ask-btn:disabled { opacity: .4; cursor: not-allowed; }
+.ask-btn-info   { border-color: #1f4a7a; color: #58a6ff; }
+.ask-btn-info:hover:not(:disabled)   { background: #0d2137; border-color: #388bfd; color: #79b8ff; }
+.ask-btn-warn   { border-color: #5a3e10; color: #d29922; }
+.ask-btn-warn:hover:not(:disabled)   { background: #1f1500; border-color: #d29922; color: #e3b341; }
+.ask-btn-action { border-color: #1a4a28; color: #3fb950; }
+.ask-btn-action:hover:not(:disabled) { background: #051c0c; border-color: #3fb950; color: #56d364; }
+
+.ai-response {
+    display: none;
+    margin-top: 10px;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-left: 3px solid #58a6ff;
+    border-radius: 4px;
+    padding: 10px 13px;
+    font-size: 0.82rem;
+    color: #c9d1d9;
+    line-height: 1.6;
+}
+.ai-response.visible { display: block; }
+.ai-response.loading { color: #484f58; font-style: italic; }
+.ai-response p  { margin: 0 0 8px; }
+.ai-response p:last-child { margin-bottom: 0; }
+.ai-response ul { margin: 4px 0 8px 18px; }
+.ai-response li { margin-bottom: 3px; }
+
+.ask-editor {
+    display: none;
+    margin-top: 8px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 4px;
+    padding: 8px 10px;
+}
+.ask-editor.visible { display: block; }
+.ask-input {
+    width: 100%;
+    background: #0d1117;
+    color: #c9d1d9;
+    border: 1px solid #30363d;
+    border-radius: 4px;
+    padding: 6px 8px;
+    font-size: 0.82rem;
+    font-family: inherit;
+    line-height: 1.5;
+    resize: vertical;
+    outline: none;
+}
+.ask-input:focus { border-color: #388bfd; }
+.ask-input::placeholder { color: #484f58; }
+.ask-editor-row { display: flex; gap: 6px; margin-top: 6px; align-items: center; }
+.ask-submit {
+    background: #1f6feb;
+    color: #fff;
+    border: 1px solid #388bfd;
+    padding: 4px 14px;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .15s;
+}
+.ask-submit:hover:not(:disabled) { background: #388bfd; }
+.ask-submit:disabled { opacity: .4; cursor: not-allowed; }
+.ask-cancel {
+    background: transparent;
+    color: #8b949e;
+    border: 1px solid #30363d;
+    padding: 4px 10px;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    cursor: pointer;
+    transition: color .15s, border-color .15s;
+}
+.ask-cancel:hover { color: #c9d1d9; border-color: #484f58; }
+.ask-hint { font-size: 0.65rem; color: #484f58; margin-left: 2px; }
 
 .note {
     padding: 10px 28px 24px;
@@ -266,6 +358,7 @@ function parseIssues(text) {
         .map(b => {
             const get = key => { const m = b.match(new RegExp('^' + key + ':\\s*(.+)', 'mi')); return m ? m[1].trim() : ''; };
             return {
+                raw:         b.trim(),
                 event:       get('Event'),
                 severity:    get('Severity').toUpperCase(),
                 date:        get('Date'),
@@ -300,14 +393,36 @@ function renderIssues(text) {
     }
     issues.sort((a, b) => (SEV_ORDER[a.severity] ?? 4) - (SEV_ORDER[b.severity] ?? 4));
     return issues.map(i => `
-        <div class="issue ${i.severity}${isOlderThanWeek(i.date) ? ' old' : ''}">
+        <div class="issue ${i.severity}${isOlderThanWeek(i.date) ? ' old' : ''}"
+             data-raw="${esc(i.raw)}"
+             data-event="${esc(i.event)}" data-severity="${esc(i.severity)}"
+             data-date="${esc(i.date)}" data-source="${esc(i.source)}"
+             data-desc="${esc(i.description)}" data-action="${esc(i.action)}">
             <div class="issue-top">
                 <span class="sev-badge sev-${i.severity}">${esc(i.severity)}</span>
                 <span class="issue-name">${esc(i.event)}</span>
+                ${i.date ? `<span class="issue-time">${esc(i.date)}</span>` : ''}
             </div>
-            ${i.date        ? `<div class="issue-meta">${esc(i.date)}${i.source ? ' &nbsp;&middot;&nbsp; ' + esc(i.source) : ''}</div>` : ''}
+            ${i.source      ? `<div class="issue-meta">${esc(i.source)}</div>` : ''}
             ${i.description ? `<div class="issue-desc">${esc(i.description)}</div>` : ''}
             ${i.action      ? `<div class="issue-action">${esc(i.action)}</div>` : ''}
+            <div class="ask-btns">
+                <button class="ask-btn ask-btn-info"   onclick="askLlm(this, 'In plain everyday language, what is this Windows event and what happened on my computer? No technical jargon.')">💡 What is this?</button>
+                <button class="ask-btn ask-btn-warn"   onclick="askLlm(this, 'How serious is this for a typical home user? Could it affect my files, privacy, or computer stability? Be honest and direct.')">⚠ How worried should I be?</button>
+                <button class="ask-btn ask-btn-action" onclick="askLlm(this, 'What is the single most important action I should take right now? Give me one clear, practical, safe next step — not a long list.')">→ What\'s my next step?</button>
+                <button class="ask-btn" onclick="toggleAskEditor(this)">✎ Ask your own…</button>
+            </div>
+            <div class="ask-editor">
+                <textarea class="ask-input" rows="2"
+                    placeholder="Type your question… (Ctrl+Enter to send, Esc to cancel)"
+                    onkeydown="handleAskKey(event, this)"></textarea>
+                <div class="ask-editor-row">
+                    <button class="ask-submit" onclick="submitCustomAsk(this)">Ask</button>
+                    <button class="ask-cancel" onclick="closeAskEditor(this)">Cancel</button>
+                    <span class="ask-hint">Ctrl+Enter to send</span>
+                </div>
+            </div>
+            <div class="ai-response"></div>
         </div>`).join('');
 }
 
@@ -319,6 +434,92 @@ function setPresetsDisabled(on) {
     document.getElementById('preset-select').disabled = on;
 }
 
+function renderMarkdown(text) {
+    // Minimal markdown: bold, bullets, paragraphs
+    const escaped = esc(text.trim());
+    const lines = escaped.split('\n');
+    let html = '';
+    let inList = false;
+    for (const raw of lines) {
+        const line = raw.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        const bullet = line.match(/^[-*]\s+(.*)/);
+        if (bullet) {
+            if (!inList) { html += '<ul>'; inList = true; }
+            html += `<li>${bullet[1]}</li>`;
+        } else {
+            if (inList) { html += '</ul>'; inList = false; }
+            html += line === '' ? '' : `<p>${line}</p>`;
+        }
+    }
+    if (inList) html += '</ul>';
+    return html;
+}
+
+let activeEs = null;
+
+
+function toggleAskEditor(btn) {
+    const issue = btn.closest('.issue');
+    const editor = issue.querySelector('.ask-editor');
+    const opening = !editor.classList.contains('visible');
+    editor.classList.toggle('visible', opening);
+    if (opening) editor.querySelector('.ask-input').focus();
+}
+
+function closeAskEditor(btn) {
+    const editor = btn.closest('.ask-editor');
+    editor.classList.remove('visible');
+    editor.querySelector('.ask-input').value = '';
+}
+
+function submitCustomAsk(btn) {
+    const editor = btn.closest('.ask-editor');
+    const question = editor.querySelector('.ask-input').value.trim();
+    if (!question) return;
+    closeAskEditor(btn);
+    askLlm(btn, question);
+}
+
+function handleAskKey(event, textarea) {
+    if (event.key === 'Enter' && event.ctrlKey) {
+        event.preventDefault();
+        submitCustomAsk(textarea.closest('.ask-editor').querySelector('.ask-submit'));
+    } else if (event.key === 'Escape') {
+        closeAskEditor(textarea.closest('.ask-editor').querySelector('.ask-cancel'));
+    }
+}
+
+function askLlm(btn, question) {
+    const issue = btn.closest('.issue');
+    const issueText = issue.dataset.raw || '';
+
+    document.getElementById('status-bar').textContent = 'Asking AI — please wait…';
+
+    issue.querySelectorAll('.ask-btn').forEach(b => b.disabled = true);
+    const resp = issue.querySelector('.ai-response');
+    resp.innerHTML = 'Asking AI…';
+    resp.className = 'ai-response loading visible';
+
+    fetch('/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ issue: issueText, question: question })
+    })
+    .then(r => r.json())
+    .then(data => {
+        resp.innerHTML = renderMarkdown(data.text || 'No response received.');
+        resp.className = 'ai-response visible';
+        issue.querySelectorAll('.ask-btn').forEach(b => b.disabled = false);
+        document.getElementById('status-bar').textContent = 'AI response ready';
+    })
+    .catch(() => {
+        resp.innerHTML = '<p>Could not get a response. Please try again.</p>';
+        resp.className = 'ai-response visible';
+        issue.querySelectorAll('.ask-btn').forEach(b => b.disabled = false);
+        document.getElementById('status-bar').textContent = 'AI request failed';
+    });
+}
+
 function startCheck() {
     const btn = document.getElementById('btn-start');
     btn.disabled = true;
@@ -328,7 +529,8 @@ function startCheck() {
 
     const days = activePresetDays();
     setPresetsDisabled(true);
-    const es = new EventSource('/stream?days=' + days);
+    activeEs = new EventSource('/stream?days=' + days);
+    const es = activeEs;
     let done = 0;
 
     es.onmessage = e => {
@@ -352,6 +554,7 @@ function startCheck() {
             done++;
 
         } else if (msg.type === 'done') {
+            activeEs = null;
             es.close();
             btn.disabled = false;
             btn.textContent = 'RUN AGAIN';
@@ -365,6 +568,7 @@ function startCheck() {
     };
 
     es.onerror = () => {
+        activeEs = null;
         es.close();
         btn.disabled = false;
         btn.textContent = 'RETRY';

@@ -33,3 +33,29 @@ ${fence}
         Write-Host "  Failed to reach LLM: $_" -ForegroundColor Red
     }
 }
+
+function Invoke-LlmExplain($issueText, $question) {
+    $userMessage = @"
+Here is a Windows system issue that was detected on my computer:
+
+$issueText
+
+Question: $question
+"@
+    $payload = @{
+        model    = "local-model"
+        messages = @(
+            @{ role = "system"; content = "You are a friendly helper explaining Windows computer issues to someone who is not technical. Use simple, everyday language. Avoid jargon. Keep your answer short, clear, and reassuring where appropriate. Use short paragraphs or a brief bullet list if it helps clarity." },
+            @{ role = "user";   content = $userMessage }
+        )
+        temperature = 0.4
+    } | ConvertTo-Json -Depth 5
+
+    try {
+        $response = Invoke-RestMethod -Uri $ApiUrl -Method Post -Body $payload -ContentType "application/json" -TimeoutSec 300
+        $response.choices[0].message.content
+    } catch {
+        Write-Host "  Failed to reach LLM for explain: $_" -ForegroundColor Red
+        "Sorry, the AI assistant could not be reached right now. Please try again."
+    }
+}
