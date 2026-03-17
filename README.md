@@ -22,7 +22,7 @@ A PowerShell script that reads Windows event logs, sends them to a local LLM, an
 .\winsyscheck.ps1 -Web
 ```
 
-The browser opens automatically. Press **START CHECK** to run the analysis. Results appear category by category as each LLM response finishes. Use a custom port with `-Port`:
+The browser opens automatically. Select a time range from the dropdown and press **START CHECK** to run the analysis. Results appear category by category as each LLM response finishes. Use a custom port with `-Port`:
 
 ```powershell
 .\winsyscheck.ps1 -Web -Port 9000
@@ -78,6 +78,18 @@ The script queries the following event log categories in order of importance:
 The web interface requires no additional tools — it is served directly by the script using .NET's built-in `HttpListener`.
 
 - The **header** shows the machine name, OS, CPU, RAM, and the name of the currently loaded LLM model (or an offline indicator if the server is unreachable)
+- A **Time range** dropdown controls which events are included:
+
+  | Option | Events included |
+  |--------|----------------|
+  | since wake | Since the last resume from sleep or hibernate (falls back to boot time if no resume event is found) |
+  | since boot | Since the last full boot or restart |
+  | 24 hours | Rolling last 24 hours |
+  | one week | Rolling last 7 days |
+  | all | All events in the log, no time filter |
+
+  Each option shows how long ago the cutoff was (e.g. `since boot (3h ago)`).
+
 - Each of the 8 categories is shown as a collapsible section, collapsed by default
 - Sections expand automatically when their result arrives
 - The category title and left accent bar reflect the **highest severity** found: red for CRITICAL, orange for HIGH, yellow for MEDIUM, blue for LOW, green for clean
