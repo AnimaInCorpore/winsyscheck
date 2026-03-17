@@ -21,11 +21,6 @@ $SourceGroups = @(
         Logs     = @('System', 'Application')
     },
     @{
-        Category = "Drivers"
-        Mode     = "levels"
-        Logs     = @('Microsoft-Windows-DriverFrameworks-UserMode/Operational')
-    },
-    @{
         Category = "Network"
         Mode     = "levels"
         Logs     = @('Microsoft-Windows-NetworkProfile/Operational', 'Microsoft-Windows-DNS-Client/Operational')

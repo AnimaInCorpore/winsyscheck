@@ -15,7 +15,7 @@ All changes must follow this rule: **no external dependencies unless explicitly 
 
 ## What the script does
 
-1. Queries Windows event logs across several categories (Security, Hardware, OS, Drivers, Network, Performance, Antivirus, Updates)
+1. Queries Windows event logs across several categories (Security, Hardware, OS, Network, Performance, Antivirus, Updates)
 2. Sends log data to a local OpenAI-compatible LLM endpoint (`http://localhost:8080/v1/chat/completions`)
 3. Prints a structured, severity-sorted report
 

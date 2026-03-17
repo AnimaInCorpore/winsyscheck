@@ -73,11 +73,10 @@ Common server ports:
 | 1 | Security | Logon failures, account lockouts, privilege escalation, account changes |
 | 2 | Hardware & Power | Unexpected shutdowns, power loss, disk and filesystem errors |
 | 3 | Core OS | System and application errors and warnings |
-| 4 | Drivers | Device and driver framework failures |
-| 5 | Network | Network profile changes, DNS client errors |
-| 6 | Performance | Slow boot/shutdown, WMI instability |
-| 7 | Antivirus & Defense | Windows Defender alerts and failures |
-| 8 | Updates & Tasks | Windows Update, BITS transfer, and scheduled task failures |
+| 4 | Network | Network profile changes, DNS client errors |
+| 5 | Performance | Slow boot/shutdown, WMI instability |
+| 6 | Antivirus & Defense | Windows Defender alerts and failures |
+| 7 | Updates & Tasks | Windows Update, BITS transfer, and scheduled task failures |
 
 ## Web UI
 
