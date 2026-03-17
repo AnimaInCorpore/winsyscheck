@@ -259,6 +259,53 @@ h1 { font-size: 1.25rem; font-weight: 600; color: #58a6ff; letter-spacing: .3px;
     color: #484f58;
     line-height: 1.5;
 }
+
+.raw-icon {
+    font-size: 0.60rem;
+    font-family: 'Consolas', 'Courier New', monospace;
+    color: #30363d;
+    background: transparent;
+    border: 1px solid #30363d;
+    padding: 1px 5px;
+    border-radius: 3px;
+    cursor: default;
+    flex-shrink: 0;
+    margin-left: auto;
+    transition: color .15s, border-color .15s, background .15s;
+    letter-spacing: .5px;
+}
+.raw-icon:hover { color: #8b949e; border-color: #484f58; background: #21262d; }
+
+#raw-tooltip {
+    position: fixed;
+    z-index: 9999;
+    display: none;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-top: 2px solid #388bfd;
+    border-radius: 5px;
+    padding: 10px 12px;
+    max-width: 560px;
+    min-width: 260px;
+    max-height: 360px;
+    overflow: auto;
+    font-size: 0.69rem;
+    font-family: 'Consolas', 'Courier New', monospace;
+    color: #8b949e;
+    white-space: pre-wrap;
+    word-break: break-all;
+    box-shadow: 0 6px 24px rgba(0,0,0,.6);
+    line-height: 1.55;
+    pointer-events: auto;
+}
+#raw-tooltip-label {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    font-size: 0.62rem;
+    color: #388bfd;
+    letter-spacing: .4px;
+    margin-bottom: 7px;
+    display: block;
+}
 </style>
 </head>
 <body>
@@ -283,6 +330,8 @@ h1 { font-size: 1.25rem; font-weight: 600; color: #58a6ff; letter-spacing: .3px;
 <div id="status-bar">Ready — click START CHECK to begin</div>
 <div class="grid" id="grid"></div>
 <div class="note" id="note"></div>
+
+<div id="raw-tooltip"><span id="raw-tooltip-label">RAW OUTPUT</span><span id="raw-tooltip-content"></span></div>
 
 <script>
 const BOOT_MS = {{BOOTTIME_MS}};
@@ -402,6 +451,9 @@ function renderIssues(text) {
                 <span class="sev-badge sev-${i.severity}">${esc(i.severity)}</span>
                 <span class="issue-name">${esc(i.event)}</span>
                 ${i.date ? `<span class="issue-time">${esc(i.date)}</span>` : ''}
+                <span class="raw-icon" data-raw="${esc(i.raw)}"
+                      onmouseenter="showRawTooltip(this)"
+                      onmouseleave="scheduleHideTooltip()">{ }</span>
             </div>
             ${i.source      ? `<div class="issue-meta">${esc(i.source)}</div>` : ''}
             ${i.description ? `<div class="issue-desc">${esc(i.description)}</div>` : ''}
@@ -457,6 +509,35 @@ function renderMarkdown(text) {
 
 let activeEs = null;
 
+// ── Raw-output tooltip ────────────────────────────────────────────────────────
+const rawTooltip    = document.getElementById('raw-tooltip');
+const rawTooltipTxt = document.getElementById('raw-tooltip-content');
+let   tooltipTimer  = null;
+
+function showRawTooltip(icon) {
+    clearTimeout(tooltipTimer);
+    rawTooltipTxt.textContent = icon.dataset.raw || '(no data)';
+    rawTooltip.style.display = 'block';
+
+    const r  = icon.getBoundingClientRect();
+    const tw = rawTooltip.offsetWidth;
+    const th = rawTooltip.offsetHeight;
+    let left = r.left;
+    let top  = r.bottom + 6;
+    if (left + tw > window.innerWidth  - 10) left = window.innerWidth  - tw - 10;
+    if (top  + th > window.innerHeight - 10) top  = r.top - th - 6;
+    rawTooltip.style.left = Math.max(6, left) + 'px';
+    rawTooltip.style.top  = Math.max(6, top)  + 'px';
+}
+
+function scheduleHideTooltip() {
+    tooltipTimer = setTimeout(() => { rawTooltip.style.display = 'none'; }, 150);
+}
+
+rawTooltip.addEventListener('mouseenter', () => clearTimeout(tooltipTimer));
+rawTooltip.addEventListener('mouseleave', scheduleHideTooltip);
+// ─────────────────────────────────────────────────────────────────────────────
+
 
 function toggleAskEditor(btn) {
     const issue = btn.closest('.issue');
@@ -507,7 +588,8 @@ function askLlm(btn, question) {
     })
     .then(r => r.json())
     .then(data => {
-        resp.innerHTML = renderMarkdown(data.text || 'No response received.');
+        const disclaimer = '<p style="color:#f85149;font-size:0.70rem;margin-bottom:7px;">⚠ AI-generated — may be incorrect. Verify before acting on any advice.</p>';
+        resp.innerHTML = disclaimer + renderMarkdown(data.text || 'No response received.');
         resp.className = 'ai-response visible';
         issue.querySelectorAll('.ask-btn').forEach(b => b.disabled = false);
         document.getElementById('status-bar').textContent = 'AI response ready';

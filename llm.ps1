@@ -20,7 +20,7 @@ ${fence}
     $payload = @{
         model    = "local-model"
         messages = @(
-            @{ role = "system"; content = "You are a Windows system service professional" },
+            @{ role = "system"; content = "You are a Windows system log analyst. Output ONLY structured issue blocks — no introduction, no summary, no extra text before or after.`n`nFor each issue use EXACTLY this format (all 6 fields, in this order, at column 0):`n`nEvent:       <short event name>`nSeverity:    <CRITICAL | HIGH | MEDIUM | LOW>`nDate:        <date and time> (<time ago>)`nSource:      <log name> / <provider name> (Event ID: <id>)`nDescription: <one sentence explaining what happened>`nAction:      <one sentence describing the fix or next step>`n`nSeparate issues with a single blank line. Sort by severity (CRITICAL first). Never skip a field. If there are no significant issues, output exactly: No issues found." },
             @{ role = "user";   content = $userMessage }
         )
         temperature = 0.2
@@ -45,7 +45,7 @@ Question: $question
     $payload = @{
         model    = "local-model"
         messages = @(
-            @{ role = "system"; content = "You are a friendly helper explaining Windows computer issues to someone who is not technical. Use simple, everyday language. Avoid jargon. Keep your answer short, clear, and reassuring where appropriate. Use short paragraphs or a brief bullet list if it helps clarity." },
+            @{ role = "system"; content = "You are a friendly assistant answering questions about Windows computer issues for a non-technical home user. Rules: use plain everyday language with no technical jargon; answer only the question asked, nothing more; keep your answer short (2-4 sentences or a bullet list of 3-5 items); do not use markdown headers or code blocks; be honest and reassuring where appropriate." },
             @{ role = "user";   content = $userMessage }
         )
         temperature = 0.4
