@@ -133,6 +133,28 @@ h1 { font-size: 1.25rem; font-weight: 600; color: #58a6ff; letter-spacing: .3px;
 }
 .card-run-btn:hover:not(:disabled) { border-color: #388bfd; color: #388bfd; }
 .card-run-btn:disabled { opacity: 0.35; cursor: default; }
+
+/* ── Disclaimer modal ──────────────────────────────────────────────────────── */
+#disclaimer-overlay {
+    position: fixed; inset: 0; z-index: 1000;
+    background: rgba(0,0,0,.75);
+    display: flex; align-items: center; justify-content: center;
+}
+#disclaimer-box {
+    background: #161b22; border: 1px solid #30363d; border-radius: 10px;
+    max-width: 520px; width: calc(100% - 40px); padding: 28px 28px 22px;
+    display: flex; flex-direction: column; gap: 16px;
+}
+#disclaimer-box h2 { font-size: 1rem; font-weight: 700; color: #f85149; }
+#disclaimer-box p  { font-size: 0.82rem; line-height: 1.6; color: #8b949e; }
+#disclaimer-box p strong { color: #c9d1d9; }
+#btn-understood {
+    align-self: flex-end;
+    background: #238636; color: #fff; border: 1px solid #2ea043;
+    padding: 7px 20px; border-radius: 6px; font-size: 0.85rem;
+    font-weight: 600; cursor: pointer;
+}
+#btn-understood:hover { background: #2ea043; }
 .card-body:empty::after { content: "Waiting…"; color: #30363d; font-size: 0.78rem; font-style: italic; }
 .card.collapsed .card-body:empty::after { display: none; }
 
@@ -317,6 +339,23 @@ h1 { font-size: 1.25rem; font-weight: 600; color: #58a6ff; letter-spacing: .3px;
 </style>
 </head>
 <body>
+
+<div id="disclaimer-overlay">
+    <div id="disclaimer-box">
+        <h2>⚠ Before You Begin</h2>
+        <p>
+            <strong>Suggested actions are recommendations only and not guaranteed solutions.</strong>
+            Review each suggestion carefully before applying any changes to your system —
+            especially before running commands in a terminal or modifying Windows system settings.
+        </p>
+        <p>
+            AI-generated analysis may be incorrect or incomplete. Always verify advice from an
+            independent source before acting on it.
+        </p>
+        <button id="btn-understood" onclick="document.getElementById('disclaimer-overlay').style.display='none'">Understood</button>
+    </div>
+</div>
+
 <header>
     <div class="header-left">
         <h1>Windows System Check</h1>
