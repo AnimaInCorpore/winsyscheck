@@ -90,7 +90,10 @@ function Invoke-WebMode {
                     default { (Get-Date).AddDays(-$streamDays) }
                 }
 
-                foreach ($group in $sourceGroups) {
+                $catFilter = $ctx.Request.QueryString["category"]
+                $groups    = if ($catFilter) { @($sourceGroups | Where-Object { $_.Category -eq $catFilter }) } else { $sourceGroups }
+
+                foreach ($group in $groups) {
                     $startEvt = [ordered]@{ type = "start"; category = $group.Category } | ConvertTo-Json -Compress
                     $writer.Write("data: $startEvt`n`n")
 

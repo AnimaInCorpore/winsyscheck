@@ -125,6 +125,14 @@ h1 { font-size: 1.25rem; font-weight: 600; color: #58a6ff; letter-spacing: .3px;
 .card.low       .card-status { color: #388bfd; }
 
 .card-body { padding: 8px 0 14px 15px; }
+
+.card-run-btn {
+    background: none; border: 1px solid #30363d; color: #8b949e;
+    font-size: 0.63rem; padding: 1px 7px; border-radius: 4px;
+    cursor: pointer; margin-right: 6px; white-space: nowrap; flex-shrink: 0;
+}
+.card-run-btn:hover:not(:disabled) { border-color: #388bfd; color: #388bfd; }
+.card-run-btn:disabled { opacity: 0.35; cursor: default; }
 .card-body:empty::after { content: "Waiting…"; color: #30363d; font-size: 0.78rem; font-style: italic; }
 .card.collapsed .card-body:empty::after { display: none; }
 
@@ -377,6 +385,7 @@ function buildGrid() {
             <div class="card-header" onclick="toggleCard('${slug(cat)}')">
                 <span class="card-title">${esc(cat)}</span>
                 <span class="card-status">Waiting</span>
+                <button class="card-run-btn" onclick="event.stopPropagation(); startCategoryCheck('${esc(cat)}', this)">&#9654; Start Check</button>
                 <span class="chevron">&#9660;</span>
             </div>
             <div class="card-body"></div>
@@ -460,6 +469,7 @@ function renderIssues(text) {
             ${i.action      ? `<div class="issue-action">${esc(i.action)}</div>` : ''}
             <div class="ask-btns">
                 <button class="ask-btn ask-btn-info"   onclick="askLlm(this, 'In plain everyday language, what is this Windows event and what happened on my computer? No technical jargon.')">💡 What is this?</button>
+                <button class="ask-btn ask-btn-info"   onclick="askLlm(this, 'Give a technically precise explanation of this Windows event: what component generated it, what internal mechanism triggered it, what the event data fields mean, and how it relates to the Windows architecture. Target audience: experienced developer or sysadmin.')">🔬 ELI the Techie</button>
                 <button class="ask-btn ask-btn-warn"   onclick="askLlm(this, 'How serious is this for a typical home user? Could it affect my files, privacy, or computer stability? Be honest and direct.')">⚠ How worried should I be?</button>
                 <button class="ask-btn ask-btn-action" onclick="askLlm(this, 'What is the single most important action I should take right now? Give me one clear, practical, safe next step — not a long list.')">→ What\'s my next step?</button>
                 <button class="ask-btn" onclick="toggleAskEditor(this)">✎ Ask your own…</button>
@@ -602,6 +612,49 @@ function askLlm(btn, question) {
     });
 }
 
+function setCardRunBtnsDisabled(on) {
+    document.querySelectorAll('.card-run-btn').forEach(b => b.disabled = on);
+}
+
+function startCategoryCheck(cat, btn) {
+    if (activeEs) return;
+    btn.disabled = true;
+    btn.textContent = '…';
+    const days = activePresetDays();
+    const es = new EventSource('/stream?days=' + days + '&category=' + encodeURIComponent(cat));
+
+    es.onmessage = e => {
+        const msg = JSON.parse(e.data);
+        if (msg.type === 'start') {
+            setCard(msg.category, 'analyzing', 'Analyzing…');
+            document.getElementById('status-bar').textContent = 'Analyzing: ' + msg.category;
+        } else if (msg.type === 'result') {
+            if (msg.clean) {
+                setCard(msg.category, 'clean', 'Clean', '<div class="clean-msg">&#10003; No issues found</div>');
+            } else if (msg.error) {
+                setCard(msg.category, 'llm-error', 'LLM error', `<div class="error-msg">${esc(msg.text)}</div>`);
+            } else {
+                const issues = parseIssues(msg.text);
+                const sev = issues.length ? highestSeverity(issues) : 'low';
+                const label = issues.length ? issues.length + ' issue' + (issues.length > 1 ? 's' : '') : 'Issues';
+                setCard(msg.category, sev, label, renderIssues(msg.text));
+            }
+        } else if (msg.type === 'done') {
+            es.close();
+            btn.disabled = false;
+            btn.textContent = '↻ Re-run';
+            document.getElementById('status-bar').textContent = cat + ' — check complete';
+        }
+    };
+
+    es.onerror = () => {
+        es.close();
+        btn.disabled = false;
+        btn.textContent = '↻ Re-run';
+        document.getElementById('status-bar').textContent = 'Connection lost — is the server still running?';
+    };
+}
+
 function startCheck() {
     const btn = document.getElementById('btn-start');
     btn.disabled = true;
@@ -611,6 +664,7 @@ function startCheck() {
 
     const days = activePresetDays();
     setPresetsDisabled(true);
+    setCardRunBtnsDisabled(true);
     activeEs = new EventSource('/stream?days=' + days);
     const es = activeEs;
     let done = 0;
@@ -641,6 +695,7 @@ function startCheck() {
             btn.disabled = false;
             btn.textContent = 'RUN AGAIN';
             setPresetsDisabled(false);
+            setCardRunBtnsDisabled(false);
             const label = days == 0 ? 'all time' : days == -2 ? 'since last wake' : days == -1 ? 'since last boot' : days == 1 ? 'last 24 hours' : 'last ' + days + ' days';
             document.getElementById('status-bar').textContent = 'Check complete — ' + done + ' categories analyzed (' + label + ')';
             document.getElementById('note').textContent =
@@ -655,6 +710,7 @@ function startCheck() {
         btn.disabled = false;
         btn.textContent = 'RETRY';
         setPresetsDisabled(false);
+        setCardRunBtnsDisabled(false);
         document.getElementById('status-bar').textContent = 'Connection lost — is the server still running?';
     };
 }

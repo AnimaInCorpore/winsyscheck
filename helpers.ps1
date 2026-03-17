@@ -34,7 +34,7 @@ function Get-LevelEvents($logs, $startTime) {
         $filter.Level = $_
         Get-WinEvent -FilterHashtable $filter -ErrorAction SilentlyContinue |
             Where-Object { -not $startTime -or $_.TimeCreated -ge $startTime } |
-            Where-Object { $seen.Add("$($_.ProviderName)-$($_.Id)") } |
+            Where-Object { $key = "$($_.ProviderName)-$($_.Id)"; $isNew = $seen.Add($key); $isNew } |
             Select-Object -First 5
     } | Where-Object { $_ -ne $null } |
         Sort-Object TimeCreated -Descending |
