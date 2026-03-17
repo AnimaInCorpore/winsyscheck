@@ -1,7 +1,10 @@
 param(
     [switch]$Web,
-    [int]$Port = 8888
+    [int]$Port = 8888,
+    [int]$Days = 7
 )
+
+$Since = (Get-Date).AddDays(-$Days)
 
 # --- Helpers ---
 
@@ -33,10 +36,13 @@ function Get-SecuritySeverity($id) {
     }
 }
 
-function Get-LevelEvents($logs) {
-    $seen = [System.Collections.Generic.HashSet[string]]::new()
+function Get-LevelEvents($logs, $startTime) {
+    $seen   = [System.Collections.Generic.HashSet[string]]::new()
+    $filter = @{LogName=$logs; Level=$null}
+    if ($startTime) { $filter.StartTime = $startTime }
     1..3 | ForEach-Object {
-        Get-WinEvent -FilterHashtable @{LogName=$logs; Level=$_} -ErrorAction SilentlyContinue |
+        $filter.Level = $_
+        Get-WinEvent -FilterHashtable $filter -ErrorAction SilentlyContinue |
             Where-Object { $seen.Add("$($_.ProviderName)-$($_.Id)") } |
             Select-Object -First 5
     } | Where-Object { $_ -ne $null } |
@@ -164,6 +170,23 @@ h1 { font-size: 1.25rem; font-weight: 600; color: #58a6ff; letter-spacing: .3px;
 .llminfo .dot-online  { color: #3fb950; }
 .llminfo .dot-offline { color: #f85149; }
 
+.header-right { display: flex; align-items: center; gap: 12px; }
+.preset-btns { display: flex; gap: 4px; }
+.preset {
+    background: #21262d;
+    color: #8b949e;
+    border: 1px solid #30363d;
+    padding: 5px 11px;
+    border-radius: 5px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: background .15s, color .15s, border-color .15s;
+    white-space: nowrap;
+}
+.preset:hover:not(:disabled) { background: #2d333b; color: #c9d1d9; border-color: #484f58; }
+.preset.active { background: #1f3a5f; color: #58a6ff; border-color: #388bfd; }
+.preset:disabled { opacity: .4; cursor: not-allowed; }
+
 #btn-start {
     background: #238636;
     color: #fff;
@@ -254,36 +277,37 @@ h1 { font-size: 1.25rem; font-weight: 600; color: #58a6ff; letter-spacing: .3px;
 .card.collapsed .card-body:empty::after { display: none; }
 
 .issue {
-    background: #0d1117;
-    border-radius: 5px;
-    padding: 9px 11px;
-    margin-bottom: 7px;
+    background: #161b22;
+    border-radius: 4px;
+    padding: 10px 13px;
+    margin-bottom: 8px;
     border-left: 3px solid #30363d;
 }
 .issue:last-child { margin-bottom: 0; }
+.issue.old { opacity: 0.45; }
 .issue.CRITICAL { border-left-color: #f85149; }
 .issue.HIGH     { border-left-color: #bd561d; }
 .issue.MEDIUM   { border-left-color: #d29922; }
 .issue.LOW      { border-left-color: #388bfd; }
 
-.issue-top { display: flex; align-items: baseline; gap: 7px; margin-bottom: 4px; }
-.issue-name { font-size: 0.8rem; font-weight: 600; color: #e6edf3; }
-.sev-badge {
-    font-size: 0.62rem; font-weight: 700; letter-spacing: .4px;
-    padding: 1px 5px; border-radius: 3px; white-space: nowrap;
+.issue-top  { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+.issue-name { font-size: 0.85rem; font-weight: 600; color: #e6edf3; }
+.sev-badge  {
+    font-size: 0.63rem; font-weight: 700; letter-spacing: .5px;
+    padding: 2px 6px; border-radius: 3px; white-space: nowrap; flex-shrink: 0;
 }
 .sev-CRITICAL { background: #3d0f0f; color: #f85149; }
-.sev-HIGH     { background: #3d1f0f; color: #bd561d; }
+.sev-HIGH     { background: #3d1f0f; color: #e0734a; }
 .sev-MEDIUM   { background: #3d330f; color: #d29922; }
 .sev-LOW      { background: #0f1f3d; color: #388bfd; }
 
-.issue-meta { font-size: 0.7rem; color: #484f58; margin-bottom: 5px; }
-.issue-desc { font-size: 0.76rem; color: #c9d1d9; margin-bottom: 3px; }
-.issue-action { font-size: 0.72rem; color: #8b949e; }
+.issue-meta   { font-size: 0.73rem; color: #484f58; line-height: 1.4; margin-bottom: 6px; }
+.issue-desc   { font-size: 0.82rem; color: #c9d1d9; line-height: 1.5; margin-bottom: 5px; }
+.issue-action { font-size: 0.78rem; color: #58a6ff; line-height: 1.4; }
 .issue-action::before { content: "→ "; }
 
-.clean-msg { color: #3fb950; font-size: 0.8rem; padding: 4px 0; }
-.error-msg { color: #8b5cf6; font-size: 0.78rem; padding: 4px 0; white-space: pre-wrap; word-break: break-word; }
+.clean-msg { color: #3fb950; font-size: 0.82rem; padding: 4px 0; }
+.error-msg { color: #8b5cf6; font-size: 0.82rem; padding: 4px 0; white-space: pre-wrap; word-break: break-word; }
 
 .note {
     padding: 10px 28px 24px;
@@ -300,7 +324,15 @@ h1 { font-size: 1.25rem; font-weight: 600; color: #58a6ff; letter-spacing: .3px;
         <span class="sysinfo">{{SYSINFO}}</span>
         <span class="llminfo">{{LLMINFO}}</span>
     </div>
-    <button id="btn-start" onclick="startCheck()">START CHECK</button>
+    <div class="header-right">
+        <div class="preset-btns" id="presets">
+            <button class="preset" data-days="-1"        onclick="selectPreset(this)">since boot</button>
+            <button class="preset" data-days="1"        onclick="selectPreset(this)">24 hours</button>
+            <button class="preset" data-days="7"        onclick="selectPreset(this)">one week</button>
+            <button class="preset" data-days="0"        onclick="selectPreset(this)">all</button>
+        </div>
+        <button id="btn-start" onclick="startCheck()">START CHECK</button>
+    </div>
 </header>
 <div id="status-bar">Ready — click START CHECK to begin</div>
 <div class="grid" id="grid"></div>
@@ -375,23 +407,48 @@ function highestSeverity(issues) {
     return 'low';
 }
 
+const SEV_ORDER = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 };
+
+function isOlderThanWeek(dateStr) {
+    if (!dateStr) return false;
+    const m = dateStr.match(/^(.+?)\s*\(/);
+    const d = new Date(m ? m[1].trim() : dateStr.trim());
+    return !isNaN(d) && (Date.now() - d.getTime()) > 7 * 24 * 60 * 60 * 1000;
+}
+
 function renderIssues(text) {
     const issues = parseIssues(text);
     if (!issues.length) {
-        // Fallback: show raw text if LLM used a different format
         return `<div class="issue LOW"><div class="issue-desc" style="white-space:pre-wrap;font-size:.73rem">${esc(text.trim())}</div></div>`;
     }
+    issues.sort((a, b) => (SEV_ORDER[a.severity] ?? 4) - (SEV_ORDER[b.severity] ?? 4));
     return issues.map(i => `
-        <div class="issue ${i.severity}">
+        <div class="issue ${i.severity}${isOlderThanWeek(i.date) ? ' old' : ''}">
             <div class="issue-top">
                 <span class="sev-badge sev-${i.severity}">${esc(i.severity)}</span>
                 <span class="issue-name">${esc(i.event)}</span>
             </div>
-            ${i.date   ? `<div class="issue-meta">${esc(i.date)}${i.source ? ' &nbsp;&middot;&nbsp; ' + esc(i.source) : ''}</div>` : ''}
+            ${i.date        ? `<div class="issue-meta">${esc(i.date)}${i.source ? ' &nbsp;&middot;&nbsp; ' + esc(i.source) : ''}</div>` : ''}
             ${i.description ? `<div class="issue-desc">${esc(i.description)}</div>` : ''}
             ${i.action      ? `<div class="issue-action">${esc(i.action)}</div>` : ''}
         </div>`).join('');
 }
+
+function selectPreset(el) {
+    document.querySelectorAll('.preset').forEach(b => b.classList.remove('active'));
+    el.classList.add('active');
+}
+
+function activePresetDays() {
+    const active = document.querySelector('.preset.active');
+    return active ? active.dataset.days : '7';
+}
+
+function setPresetsDisabled(on) {
+    document.querySelectorAll('.preset').forEach(b => b.disabled = on);
+}
+
+document.querySelector('.preset[data-days="0"]').classList.add('active');
 
 function startCheck() {
     const btn = document.getElementById('btn-start');
@@ -400,7 +457,9 @@ function startCheck() {
     document.getElementById('note').textContent = '';
     buildGrid();
 
-    const es = new EventSource('/stream');
+    const days = activePresetDays();
+    setPresetsDisabled(true);
+    const es = new EventSource('/stream?days=' + days);
     let done = 0;
 
     es.onmessage = e => {
@@ -427,7 +486,9 @@ function startCheck() {
             es.close();
             btn.disabled = false;
             btn.textContent = 'RUN AGAIN';
-            document.getElementById('status-bar').textContent = 'Check complete — ' + done + ' categories analyzed';
+            setPresetsDisabled(false);
+            const label = days == 0 ? 'all time' : days == -1 ? 'since last boot' : days == 1 ? 'last 24 hours' : 'last ' + days + ' days';
+            document.getElementById('status-bar').textContent = 'Check complete — ' + done + ' categories analyzed (' + label + ')';
             document.getElementById('note').textContent =
                 'NOTE: Suggested actions are recommendations only and not guaranteed solutions. ' +
                 'Review carefully before applying any changes to your system.';
@@ -438,6 +499,7 @@ function startCheck() {
         es.close();
         btn.disabled = false;
         btn.textContent = 'RETRY';
+        setPresetsDisabled(false);
         document.getElementById('status-bar').textContent = 'Connection lost — is the server still running?';
     };
 }
@@ -453,6 +515,7 @@ buildGrid();
     $ramGb   = [math]::Round($osInfo.TotalVisibleMemorySize / 1MB, 1)
     $sysInfo = "$env:COMPUTERNAME  ·  $($osInfo.Caption)  ·  $cpuInfo  ·  $ramGb GB RAM"
     $html    = $html.Replace('{{SYSINFO}}', $sysInfo)
+    $html    = $html.Replace('{{DAYS}}', $Days)
 
     $modelsUrl = $ApiUrl -replace '/chat/completions$', '/models'
     try {
@@ -472,8 +535,10 @@ buildGrid();
 
     try {
         while ($true) {
-            $context  = $listener.GetContext()
-            $path     = $context.Request.Url.LocalPath
+            $async = $listener.BeginGetContext($null, $null)
+            while (-not $async.AsyncWaitHandle.WaitOne(500)) {}
+            $context = $listener.EndGetContext($async)
+            $path    = $context.Request.Url.LocalPath
 
             if ($path -eq "/") {
                 $bytes = [System.Text.Encoding]::UTF8.GetBytes($html)
@@ -493,12 +558,22 @@ buildGrid();
                 $writer.NewLine   = "`n"
 
                 try {
+                    $daysParam   = $context.Request.QueryString["days"]
+                    $streamDays  = if ($daysParam -match '^-?\d+$') { [int]$daysParam } else { $Days }
+                    $streamSince = switch ($streamDays) {
+                        -1   { (Get-CimInstance Win32_OperatingSystem).LastBootUpTime }
+                         0   { $null }
+                        default { (Get-Date).AddDays(-$streamDays) }
+                    }
+
                     foreach ($group in $SourceGroups) {
                         $startEvt = [ordered]@{ type = "start"; category = $group.Category } | ConvertTo-Json -Compress
                         $writer.Write("data: $startEvt`n`n")
 
                         if ($group.Mode -eq "ids") {
-                            $events = Get-WinEvent -FilterHashtable @{LogName=$group.Logs; Id=$group.Ids} -MaxEvents 10 -ErrorAction SilentlyContinue |
+                            $idsFilter = @{LogName=$group.Logs; Id=$group.Ids}
+                            if ($streamSince) { $idsFilter.StartTime = $streamSince }
+                            $events = Get-WinEvent -FilterHashtable $idsFilter -MaxEvents 10 -ErrorAction SilentlyContinue |
                                 Where-Object { $_ -ne $null } |
                                 Sort-Object TimeCreated -Descending |
                                 Select-Object @{n='Severity';e={Get-SecuritySeverity $_.Id}},
@@ -506,7 +581,7 @@ buildGrid();
                                               TimeCreated, LogName, ProviderName, Id,
                                               @{n='Message';e={($_.Message -replace '\s+',' ').Substring(0,[Math]::Min(200,$_.Message.Length))}}
                         } else {
-                            $events = Get-LevelEvents $group.Logs
+                            $events = Get-LevelEvents $group.Logs $streamSince
                         }
 
                         if (-not $events) {
@@ -549,7 +624,7 @@ foreach ($group in $SourceGroups) {
     Write-Host "`nAnalyzing $($group.Category)..." -ForegroundColor Cyan
 
     if ($group.Mode -eq "ids") {
-        $events = Get-WinEvent -FilterHashtable @{LogName=$group.Logs; Id=$group.Ids} -MaxEvents 10 -ErrorAction SilentlyContinue |
+        $events = Get-WinEvent -FilterHashtable @{LogName=$group.Logs; Id=$group.Ids; StartTime=$Since} -MaxEvents 10 -ErrorAction SilentlyContinue |
             Where-Object { $_ -ne $null } |
             Sort-Object TimeCreated -Descending |
             Select-Object @{n='Severity';e={Get-SecuritySeverity $_.Id}},
@@ -557,7 +632,7 @@ foreach ($group in $SourceGroups) {
                           TimeCreated, LogName, ProviderName, Id,
                           @{n='Message';e={($_.Message -replace '\s+',' ').Substring(0,[Math]::Min(200,$_.Message.Length))}}
     } else {
-        $events = Get-LevelEvents $group.Logs
+        $events = Get-LevelEvents $group.Logs $Since
     }
 
     if (-not $events) {
