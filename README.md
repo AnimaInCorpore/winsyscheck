@@ -6,10 +6,7 @@ A PowerShell script that reads Windows event logs, sends them to a local LLM, an
 
 - Windows 10/11
 - PowerShell 5.1 or later
-- A locally running LLM server compatible with the OpenAI chat completions API, e.g.:
-  - [LM Studio](https://lmstudio.ai) (default port 1234)
-  - [Ollama](https://ollama.com) (default port 11434)
-  - Any OpenAI-compatible server (default port 8080)
+- [llama.cpp](https://github.com/ggml-org/llama.cpp) with the built-in server running locally
 
 ## Usage
 
@@ -19,19 +16,33 @@ A PowerShell script that reads Windows event logs, sends them to a local LLM, an
 
 > Run as Administrator to ensure access to all event logs, including the Security log.
 
+## Setup: llama.cpp server
+
+Start the llama.cpp server with any GGUF model:
+
+```bash
+llama-server -m your-model.gguf --port 8080
+```
+
+The script connects to `http://localhost:8080/v1/chat/completions` by default, which matches the llama.cpp server's OpenAI-compatible endpoint.
+
+For best results use an instruction-tuned model (e.g. Mistral, Llama 3, Qwen).
+
 ## Configuration
 
-At the top of the script, update `$ApiUrl` to match your local LLM server:
+Update `$ApiUrl` in the script if your server runs on a different port:
 
 ```powershell
 $ApiUrl = "http://localhost:8080/v1/chat/completions"
 ```
 
+Other compatible servers:
+
 | Server     | Default port |
 |------------|-------------|
+| llama.cpp  | 8080        |
 | LM Studio  | 1234        |
 | Ollama     | 11434       |
-| Other      | 8080        |
 
 ## What it checks
 
