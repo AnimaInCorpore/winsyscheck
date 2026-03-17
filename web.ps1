@@ -102,6 +102,7 @@ function Invoke-WebMode {
                     if (-not $events) {
                         $resultEvt = [ordered]@{ type = "result"; category = $group.Category; clean = $true } | ConvertTo-Json -Compress
                     } else {
+                        $rawText   = $events | Out-String
                         $analysis  = Invoke-LlmAnalysis $group.Category $events
                         $resultEvt = [ordered]@{
                             type     = "result"
@@ -109,6 +110,7 @@ function Invoke-WebMode {
                             clean    = $false
                             error    = [bool](-not $analysis)
                             text     = if ($analysis) { $analysis } else { "Could not reach LLM at $apiUrl" }
+                            raw      = $rawText
                         } | ConvertTo-Json -Compress
                     }
                     $writer.Write("data: $resultEvt`n`n")
@@ -123,7 +125,8 @@ function Invoke-WebMode {
             try {
                 $body   = [System.IO.StreamReader]::new($ctx.Request.InputStream, [System.Text.Encoding]::UTF8).ReadToEnd()
                 $data   = $body | ConvertFrom-Json
-                $answer = Invoke-LlmExplain $data.issue $data.question
+                $persona = if ($data.PSObject.Properties['persona']) { $data.persona } else { $null }
+                $answer = Invoke-LlmExplain $data.issue $data.question $persona
                 $json   = @{ text = $answer } | ConvertTo-Json -Compress
             } catch {
                 $json = '{"text":"Sorry, something went wrong while processing your question."}'

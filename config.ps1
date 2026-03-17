@@ -23,7 +23,7 @@ $SourceGroups = @(
     @{
         Category = "Network"
         Mode     = "levels"
-        Logs     = @('Microsoft-Windows-NetworkProfile/Operational', 'Microsoft-Windows-DNS-Client/Operational')
+        Logs     = @('Microsoft-Windows-NetworkProfile/Operational')
     },
     @{
         Category = "Performance"

@@ -1,6 +1,6 @@
 function Invoke-LlmAnalysis($category, $events) {
     $eventText = $events | Out-String
-    $fence = '```'
+    $fence = '````'
     $userMessage = @"
 Analyze the following Windows [$category] events and report each issue using the template below. Be short and concise.
 
@@ -34,7 +34,7 @@ ${fence}
     }
 }
 
-function Invoke-LlmExplain($issueText, $question) {
+function Invoke-LlmExplain($issueText, $question, $persona) {
     $userMessage = @"
 Here is a Windows system issue that was detected on my computer:
 
@@ -42,10 +42,15 @@ $issueText
 
 Question: $question
 "@
+    $systemMessage = if ($persona -eq 'techie') {
+        "You are a senior Windows systems engineer and developer. Rules: give technically precise answers referencing Windows internals, APIs, services, and architecture where relevant; use correct terminology; keep your answer focused (3-6 sentences or a concise bullet list); you may reference documentation, registry keys, event log fields, and command-line tools; do not dumb things down."
+    } else {
+        "You are a friendly assistant answering questions about Windows computer issues for a non-technical home user. Rules: use plain everyday language with no technical jargon; answer only the question asked, nothing more; keep your answer short (2-4 sentences or a bullet list of 3-5 items); do not use markdown headers or code blocks; be honest and reassuring where appropriate."
+    }
     $payload = @{
         model    = "local-model"
         messages = @(
-            @{ role = "system"; content = "You are a friendly assistant answering questions about Windows computer issues for a non-technical home user. Rules: use plain everyday language with no technical jargon; answer only the question asked, nothing more; keep your answer short (2-4 sentences or a bullet list of 3-5 items); do not use markdown headers or code blocks; be honest and reassuring where appropriate." },
+            @{ role = "system"; content = $systemMessage },
             @{ role = "user";   content = $userMessage }
         )
         temperature = 0.4

@@ -483,7 +483,7 @@ function isOlderThanWeek(dateStr) {
     return !isNaN(d) && (Date.now() - d.getTime()) > 7 * 24 * 60 * 60 * 1000;
 }
 
-function renderIssues(text) {
+function renderIssues(text, rawEvents) {
     const issues = parseIssues(text);
     if (!issues.length) {
         return `<div class="issue LOW"><div class="issue-desc" style="white-space:pre-wrap;font-size:.73rem">${esc(text.trim())}</div></div>`;
@@ -491,7 +491,7 @@ function renderIssues(text) {
     issues.sort((a, b) => (SEV_ORDER[a.severity] ?? 4) - (SEV_ORDER[b.severity] ?? 4));
     return issues.map(i => `
         <div class="issue ${i.severity}${isOlderThanWeek(i.date) ? ' old' : ''}"
-             data-raw="${esc(i.raw)}"
+             data-raw="${esc(rawEvents || i.raw)}"
              data-event="${esc(i.event)}" data-severity="${esc(i.severity)}"
              data-date="${esc(i.date)}" data-source="${esc(i.source)}"
              data-desc="${esc(i.description)}" data-action="${esc(i.action)}">
@@ -508,7 +508,7 @@ function renderIssues(text) {
             ${i.action      ? `<div class="issue-action">${esc(i.action)}</div>` : ''}
             <div class="ask-btns">
                 <button class="ask-btn ask-btn-info"   onclick="askLlm(this, 'In plain everyday language, what is this Windows event and what happened on my computer? No technical jargon.')">💡 What is this?</button>
-                <button class="ask-btn ask-btn-info"   onclick="askLlm(this, 'Give a technically precise explanation of this Windows event: what component generated it, what internal mechanism triggered it, what the event data fields mean, and how it relates to the Windows architecture. Target audience: experienced developer or sysadmin.')">🔬 ELI the Techie</button>
+                <button class="ask-btn ask-btn-info"   onclick="askLlm(this, 'Give a technically precise explanation of this Windows event: what component generated it, what internal mechanism triggered it, what the event data fields mean, and how it relates to the Windows architecture. Target audience: experienced developer or sysadmin.', 'techie')">🔬 ELI the Techie</button>
                 <button class="ask-btn ask-btn-warn"   onclick="askLlm(this, 'How serious is this for a typical home user? Could it affect my files, privacy, or computer stability? Be honest and direct.')">⚠ How worried should I be?</button>
                 <button class="ask-btn ask-btn-action" onclick="askLlm(this, 'What is the single most important action I should take right now? Give me one clear, practical, safe next step — not a long list.')">→ What\'s my next step?</button>
                 <button class="ask-btn" onclick="toggleAskEditor(this)">✎ Ask your own…</button>
@@ -619,9 +619,9 @@ function handleAskKey(event, textarea) {
     }
 }
 
-function askLlm(btn, question) {
+function askLlm(btn, question, persona) {
     const issue = btn.closest('.issue');
-    const issueText = issue.dataset.raw || '';
+    const issueText = '````\n' + (issue.dataset.raw || '') + '\n````';
 
     document.getElementById('status-bar').textContent = 'Asking AI — please wait…';
 
@@ -630,10 +630,13 @@ function askLlm(btn, question) {
     resp.innerHTML = 'Asking AI…';
     resp.className = 'ai-response loading visible';
 
+    const payload = { issue: issueText, question: question };
+    if (persona) payload.persona = persona;
+
     fetch('/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ issue: issueText, question: question })
+        body: JSON.stringify(payload)
     })
     .then(r => r.json())
     .then(data => {
@@ -676,7 +679,7 @@ function startCategoryCheck(cat, btn) {
                 const issues = parseIssues(msg.text);
                 const sev = issues.length ? highestSeverity(issues) : 'low';
                 const label = issues.length ? issues.length + ' issue' + (issues.length > 1 ? 's' : '') : 'Issues';
-                setCard(msg.category, sev, label, renderIssues(msg.text));
+                setCard(msg.category, sev, label, renderIssues(msg.text, msg.raw));
             }
         } else if (msg.type === 'done') {
             es.close();
@@ -724,7 +727,7 @@ function startCheck() {
                 const issues = parseIssues(msg.text);
                 const sev = issues.length ? highestSeverity(issues) : 'low';
                 const label = issues.length ? issues.length + ' issue' + (issues.length > 1 ? 's' : '') : 'Issues';
-                setCard(msg.category, sev, label, renderIssues(msg.text));
+                setCard(msg.category, sev, label, renderIssues(msg.text, msg.raw));
             }
             done++;
 

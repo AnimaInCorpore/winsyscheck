@@ -126,12 +126,12 @@ Each issue card shows a severity badge, timestamp, source, description, and reco
 | Button | What it does |
 |--------|-------------|
 | 💡 What is this? | Plain-language explanation, no technical jargon |
-| 🔬 ELI the Techie | Technical deep-dive: component, mechanism, event fields, Windows architecture context |
+| 🔬 ELI the Techie | Technical deep-dive from a senior systems engineer persona: component, mechanism, event fields, Windows architecture context |
 | ⚠ How worried should I be? | Honest severity assessment for a typical home user |
 | → What's my next step? | Single most important action to take right now |
 | ✎ Ask your own… | Free-form question about the issue |
 
-The `{ }` icon on each issue opens a tooltip showing the raw LLM output for that entry.
+The `{ }` icon on each issue opens a tooltip showing the raw Windows event log data for that entry.
 
 Issues older than one week are visually dimmed to distinguish recent from historical events.
 
