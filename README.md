@@ -5,8 +5,10 @@ A PowerShell tool that reads Windows event logs, sends them to a local LLM, and 
 ## Requirements
 
 - Windows 10/11
-- PowerShell 5.1 or later
+- Windows PowerShell 5.1 or PowerShell 7+ on Windows
 - A local LLM server with an OpenAI-compatible API (e.g. [llama.cpp](https://github.com/ggml-org/llama.cpp), LM Studio, Ollama)
+
+This tool is Windows-only because it reads Windows Event Logs. It is not expected to run on macOS/Linux PowerShell, and it does not support Windows PowerShell versions older than 5.1.
 
 ## Usage
 
@@ -22,19 +24,22 @@ A PowerShell tool that reads Windows event logs, sends them to a local LLM, and 
 .\winsyscheck.ps1 -Web
 ```
 
-The browser opens automatically. Select a time range, press **START CHECK**, and results appear category by category as each LLM response arrives.
+The browser opens automatically unless `-NoBrowser` is used. Select a time range, press **Start check**, and results update as each event group is analyzed by the LLM.
 
 **Optional parameters:**
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `-Web`    | off     | Launch the web UI instead of CLI output |
+| `-NoBrowser` | off | Start the web server without opening a browser |
+| `-ApiUrl` | `http://localhost:8080/v1/chat/completions` | Override the local LLM endpoint without editing `config.ps1` |
 | `-Port`   | 8888    | Web UI port |
-| `-Days`   | 7       | How many days back to look (CLI mode) |
+| `-Days`   | 7       | How many days back to look; use `0` for no time filter |
 
 ```powershell
 .\winsyscheck.ps1 -Web -Port 9000
 .\winsyscheck.ps1 -Days 1
+.\winsyscheck.ps1 -ApiUrl http://localhost:1234/v1/chat/completions
 ```
 
 > Run as Administrator to ensure access to all event logs, including the Security log.
@@ -49,6 +54,8 @@ llama-server -m your-model.gguf --port 8080
 
 The script connects to `http://localhost:8080/v1/chat/completions` by default.
 For best results use an instruction-tuned model (e.g. Mistral, Llama 3, Qwen).
+
+If the LLM server is unreachable, CLI mode exits early with a clear endpoint message. Web mode still starts, shows the LLM as offline, and disables checks until the server is started and the page is refreshed.
 
 ## Configuration
 
@@ -71,12 +78,14 @@ Common server ports:
 | # | Category | What it covers |
 |---|----------|---------------|
 | 1 | Security | Logon failures, account lockouts, privilege escalation, account changes |
-| 2 | Hardware & Power | Unexpected shutdowns, power loss, disk and filesystem errors |
-| 3 | Core OS | System and application errors and warnings |
-| 4 | Network | Network profile changes, DNS client errors |
-| 5 | Performance | Slow boot/shutdown, WMI instability |
-| 6 | Antivirus & Defense | Windows Defender alerts and failures |
-| 7 | Updates & Tasks | Windows Update, BITS transfer, and scheduled task failures |
+| 2 | Hardware & Storage | Hardware events, disk errors, and filesystem errors |
+| 3 | Crashes & Services | BSODs, unexpected reboots, and service start failures |
+| 4 | System | Other System log errors and warnings not covered by crashes or services |
+| 5 | Application | App crashes, errors, and warnings |
+| 6 | Network | Network profile changes, DNS, DHCP, and TCP/IP errors |
+| 7 | Performance | Slow boot/shutdown diagnostics and WMI instability |
+| 8 | Antivirus & Defense | Windows Defender alerts and failures |
+| 9 | Updates & Tasks | Windows Update, BITS transfer, and scheduled task failures |
 
 ## Web UI
 
@@ -100,14 +109,14 @@ The dropdown controls which events are included in the analysis:
 | since boot | Since the last full boot or restart |
 | 24 hours | Rolling last 24 hours |
 | one week | Rolling last 7 days |
-| all | All events in the log, no time filter |
+| all | No time filter; the newest matching events are sampled to keep scans responsive |
 
 Each option shows how long ago the cutoff was (e.g. `since boot (3h ago)`).
 
 ### Category cards
 
-- 8 collapsible cards, one per category, collapsed by default
-- Each card has a **▶ Start Check** button on the right of its header to run that single category independently, without re-running the full check
+- 9 collapsible cards, one per category, collapsed by default
+- Each card has a **Start** button on the right of its header to run that single category independently, without re-running the full check
 - Cards expand automatically when their result arrives
 - The title and left accent bar reflect the highest severity found:
 
@@ -117,7 +126,7 @@ Each option shows how long ago the cutoff was (e.g. `since boot (3h ago)`).
   | Orange | HIGH |
   | Yellow | MEDIUM |
   | Blue | LOW |
-  | Green | Clean — no issues found |
+  | Green | Clean - no issues found |
 
 ### Per-issue actions
 
@@ -125,20 +134,20 @@ Each issue card shows a severity badge, timestamp, source, description, and reco
 
 | Button | What it does |
 |--------|-------------|
-| 💡 What is this? | Plain-language explanation, no technical jargon |
-| 🔬 ELI the Techie | Technical deep-dive from a senior systems engineer persona: component, mechanism, event fields, Windows architecture context |
-| ⚠ How worried should I be? | Honest severity assessment for a typical home user |
-| → What's my next step? | Single most important action to take right now |
-| ✎ Ask your own… | Free-form question about the issue |
+| Explain | Plain-language explanation, no technical jargon |
+| Technical | Technical deep-dive from a senior systems engineer persona: component, mechanism, event fields, Windows architecture context |
+| Risk | Honest severity assessment for a typical home user |
+| Next step | Single most important action to take right now |
+| Ask | Free-form question about the issue |
 
-The `{ }` icon on each issue opens a tooltip showing the raw Windows event log data for that entry.
+The `{ }` icon on each issue opens a tooltip showing the structured issue text used for follow-up questions.
 
 Issues older than one week are visually dimmed to distinguish recent from historical events.
 
 ### Re-running
 
-- **START CHECK** (header) — runs all 8 categories
-- **▶ Start Check** (per card) — re-runs a single category at any time
+- **Start check** (header) - runs all 9 categories
+- **Start** / **Re-run** (per card) - runs a single category at any time
 - Both respect the currently selected time range
 
 ## Report format

@@ -1,8 +1,38 @@
+function Get-LlmModelsUrl {
+    if ($ApiUrl -match '/chat/completions/?$') {
+        return ($ApiUrl -replace '/chat/completions/?$', '/models')
+    }
+
+    $uri = [System.Uri]$ApiUrl
+    $base = $uri.GetLeftPart([System.UriPartial]::Authority)
+    "$base/v1/models"
+}
+
+function Get-LlmStatus {
+    try {
+        $models = Invoke-RestMethod -Uri (Get-LlmModelsUrl) -Method Get -TimeoutSec 5 -ErrorAction Stop
+        $modelName = if ($models.data -and $models.data.Count -gt 0) { $models.data[0].id } else { "unknown model" }
+        @{
+            Online = $true
+            Model = $modelName
+            Error = $null
+        }
+    } catch {
+        @{
+            Online = $false
+            Model = "offline"
+            Error = $_.Exception.Message
+        }
+    }
+}
+
 function Invoke-LlmAnalysis($category, $events) {
-    $eventText = $events | Out-String
+    $eventText = Format-EventsForLlm $events
     $fence = '````'
     $userMessage = @"
-Analyze the following Windows [$category] events and report each issue using the template below. Be short and concise.
+Analyze the following Windows [$category] event groups and report each issue using the template below. Be short and concise.
+Each group may represent multiple repeated events. Use Count, FirstSeen, and LastSeen to describe repeated occurrences without listing the same problem again.
+CollapsedMessageVariants shows how many near-duplicate message variants were collapsed into the displayed full original message.
 
 Use the following template for each issue, separated by a blank line. Sort by severity (CRITICAL first):
 
@@ -20,18 +50,22 @@ ${fence}
     $payload = @{
         model    = "local-model"
         messages = @(
-            @{ role = "system"; content = "You are a Windows system log analyst. Output ONLY structured issue blocks — no introduction, no summary, no extra text before or after.`n`nFor each issue use EXACTLY this format (all 6 fields, in this order, at column 0):`n`nEvent:       <short event name>`nSeverity:    <CRITICAL | HIGH | MEDIUM | LOW>`nDate:        <date and time> (<time ago>)`nSource:      <log name> / <provider name> (Event ID: <id>)`nDescription: <one sentence explaining what happened>`nAction:      <one sentence describing the fix or next step>`n`nSeparate issues with a single blank line. Sort by severity (CRITICAL first). Never skip a field. If there are no significant issues, output exactly: No issues found." },
+            @{ role = "system"; content = "You are a Windows system log analyst. Output ONLY structured issue blocks - no introduction, no summary, no extra text before or after.`n`nFor each issue use EXACTLY this format (all 6 fields, in this order, at column 0):`n`nEvent:       <short event name>`nSeverity:    <CRITICAL | HIGH | MEDIUM | LOW>`nDate:        <date and time> (<time ago>)`nSource:      <log name> / <provider name> (Event ID: <id>)`nDescription: <one sentence explaining what happened>`nAction:      <one sentence describing the fix or next step>`n`nSeparate issues with a single blank line. Sort by severity (CRITICAL first). Never skip a field. If there are no significant issues, output exactly: No issues found." },
             @{ role = "user";   content = $userMessage }
         )
         temperature = 0.2
     } | ConvertTo-Json -Depth 5
 
     try {
-        $response = Invoke-RestMethod -Uri $ApiUrl -Method Post -Body $payload -ContentType "application/json" -TimeoutSec 300
+        $response = Invoke-RestMethod -Uri $ApiUrl -Method Post -Body $payload -ContentType "application/json" -TimeoutSec 600
         $response.choices[0].message.content
     } catch {
         Write-Host "  Failed to reach LLM: $_" -ForegroundColor Red
     }
+}
+
+function Test-LlmNoIssues($text) {
+    $text -match '^\s*No issues found\.?\s*$'
 }
 
 function Invoke-LlmExplain($issueText, $question, $persona) {
@@ -57,7 +91,7 @@ Question: $question
     } | ConvertTo-Json -Depth 5
 
     try {
-        $response = Invoke-RestMethod -Uri $ApiUrl -Method Post -Body $payload -ContentType "application/json" -TimeoutSec 300
+        $response = Invoke-RestMethod -Uri $ApiUrl -Method Post -Body $payload -ContentType "application/json" -TimeoutSec 600
         $response.choices[0].message.content
     } catch {
         Write-Host "  Failed to reach LLM for explain: $_" -ForegroundColor Red

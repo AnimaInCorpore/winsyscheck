@@ -19,12 +19,13 @@ header {
 }
 .header-left { display: flex; flex-direction: column; gap: 3px; }
 h1 { font-size: 1.25rem; font-weight: 600; color: #58a6ff; letter-spacing: .3px; }
-.sysinfo { font-size: 0.72rem; color: #484f58; letter-spacing: .2px; }
-.llminfo { font-size: 0.72rem; color: #484f58; letter-spacing: .2px; }
-.llminfo .dot-online  { color: #3fb950; }
-.llminfo .dot-offline { color: #f85149; }
+.sysinfo { font-size: 0.72rem; color: #484f58; letter-spacing: .2px; line-height: 1.35; overflow-wrap: anywhere; }
+.llminfo { font-size: 0.72rem; color: #8b949e; letter-spacing: .2px; line-height: 1.35; display: inline-flex; align-items: center; gap: 6px; overflow-wrap: anywhere; }
+.status-dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; flex: 0 0 auto; }
+.status-dot.online  { background: #3fb950; box-shadow: 0 0 0 3px rgba(63,185,80,.12); }
+.status-dot.offline { background: #f85149; box-shadow: 0 0 0 3px rgba(248,81,73,.12); }
 
-.header-right { display: flex; align-items: center; gap: 12px; }
+.header-right { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; }
 .range-label { font-size: 0.75rem; color: #8b949e; white-space: nowrap; }
 #preset-select {
     background: #21262d;
@@ -72,6 +73,11 @@ h1 { font-size: 1.25rem; font-weight: 600; color: #58a6ff; letter-spacing: .3px;
     padding: 20px 28px;
     max-width: 860px;
     margin: 0 auto;
+}
+
+.llm-offline .card-run-btn,
+.llm-offline #btn-start {
+    opacity: .5;
 }
 
 .card { border-bottom: 1px solid #21262d; }
@@ -128,21 +134,23 @@ h1 { font-size: 1.25rem; font-weight: 600; color: #58a6ff; letter-spacing: .3px;
 
 .card-run-btn {
     background: none; border: 1px solid #30363d; color: #8b949e;
-    font-size: 0.63rem; padding: 1px 7px; border-radius: 4px;
+    font-size: 0.68rem; padding: 3px 8px; border-radius: 4px;
     cursor: pointer; margin-right: 6px; white-space: nowrap; flex-shrink: 0;
 }
 .card-run-btn:hover:not(:disabled) { border-color: #388bfd; color: #388bfd; }
 .card-run-btn:disabled { opacity: 0.35; cursor: default; }
 
-/* ── Disclaimer modal ──────────────────────────────────────────────────────── */
+/* Disclaimer modal */
 #disclaimer-overlay {
     position: fixed; inset: 0; z-index: 1000;
     background: rgba(0,0,0,.75);
     display: flex; align-items: center; justify-content: center;
+    padding: 16px;
 }
 #disclaimer-box {
     background: #161b22; border: 1px solid #30363d; border-radius: 10px;
-    max-width: 520px; width: calc(100% - 40px); padding: 28px 28px 22px;
+    width: min(520px, calc(100vw - 32px)); padding: 28px 28px 22px;
+    max-height: calc(100vh - 32px); overflow: auto;
     display: flex; flex-direction: column; gap: 16px;
 }
 #disclaimer-box h2 { font-size: 1rem; font-weight: 700; color: #f85149; }
@@ -155,7 +163,7 @@ h1 { font-size: 1.25rem; font-weight: 600; color: #58a6ff; letter-spacing: .3px;
     font-weight: 600; cursor: pointer;
 }
 #btn-understood:hover { background: #2ea043; }
-.card-body:empty::after { content: "Waiting…"; color: #30363d; font-size: 0.78rem; font-style: italic; }
+.card-body:empty::after { content: "Waiting..."; color: #30363d; font-size: 0.78rem; font-style: italic; }
 .card.collapsed .card-body:empty::after { display: none; }
 
 .issue {
@@ -187,7 +195,7 @@ h1 { font-size: 1.25rem; font-weight: 600; color: #58a6ff; letter-spacing: .3px;
 .issue-time   { font-size: 0.68rem; color: #484f58; margin-left: auto; white-space: nowrap; }
 .issue-desc   { font-size: 0.82rem; color: #c9d1d9; line-height: 1.5; margin-bottom: 5px; }
 .issue-action { font-size: 0.78rem; color: #58a6ff; line-height: 1.4; }
-.issue-action::before { content: "→ "; }
+.issue-action::before { content: "Action: "; color: #8b949e; }
 
 .clean-msg { color: #3fb950; font-size: 0.82rem; padding: 4px 0; }
 .error-msg { color: #8b5cf6; font-size: 0.82rem; padding: 4px 0; white-space: pre-wrap; word-break: break-word; }
@@ -197,6 +205,7 @@ h1 { font-size: 1.25rem; font-weight: 600; color: #58a6ff; letter-spacing: .3px;
     background: #21262d;
     color: #8b949e;
     border: 1px solid #30363d;
+    min-height: 28px;
     padding: 4px 10px;
     border-radius: 4px;
     font-size: 0.71rem;
@@ -336,16 +345,55 @@ h1 { font-size: 1.25rem; font-weight: 600; color: #58a6ff; letter-spacing: .3px;
     margin-bottom: 7px;
     display: block;
 }
+
+@media (max-width: 720px) {
+    header {
+        align-items: stretch;
+        flex-direction: column;
+        padding: 16px;
+    }
+    .header-right {
+        justify-content: flex-start;
+    }
+    .range-label {
+        width: 100%;
+    }
+    #btn-start,
+    #preset-select {
+        flex: 1 1 100%;
+        min-width: 0;
+    }
+    #status-bar,
+    .grid,
+    .note {
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+    .card-header {
+        align-items: flex-start;
+        flex-wrap: wrap;
+    }
+    .card-title {
+        min-width: 160px;
+    }
+    .issue-top {
+        flex-wrap: wrap;
+    }
+    .issue-time {
+        margin-left: 0;
+        width: 100%;
+    }
+}
 </style>
 </head>
 <body>
 
 <div id="disclaimer-overlay">
     <div id="disclaimer-box">
-        <h2>⚠ Before You Begin</h2>
+        <h2>Before You Begin</h2>
         <p>
             <strong>Suggested actions are recommendations only and not guaranteed solutions.</strong>
-            Review each suggestion carefully before applying any changes to your system —
+            Review each suggestion carefully before applying any changes to your system -
             especially before running commands in a terminal or modifying Windows system settings.
         </p>
         <p>
@@ -369,20 +417,22 @@ h1 { font-size: 1.25rem; font-weight: 600; color: #58a6ff; letter-spacing: .3px;
             <option value="-1">since boot</option>
             <option value="1">24 hours</option>
             <option value="7">one week</option>
-            <option value="0" selected>all</option>
+            <option value="0">all</option>
         </select>
-        <button id="btn-start" onclick="startCheck()">START CHECK</button>
+        <button id="btn-start" onclick="startCheck()">Start check</button>
     </div>
 </header>
-<div id="status-bar">Ready — click START CHECK to begin</div>
+<div id="status-bar">Ready - click Start check to begin</div>
 <div class="grid" id="grid"></div>
 <div class="note" id="note"></div>
 
-<div id="raw-tooltip"><span id="raw-tooltip-label">RAW OUTPUT</span><span id="raw-tooltip-content"></span></div>
+<div id="raw-tooltip"><span id="raw-tooltip-label">ISSUE TEXT</span><span id="raw-tooltip-content"></span></div>
 
 <script>
 const BOOT_MS = {{BOOTTIME_MS}};
 const WAKE_MS = {{WAKETIME_MS}};
+const DEFAULT_DAYS = Number('{{DAYS}}');
+const LLM_READY = {{LLM_READY}};
 
 function timeAgo(ms) {
     const s = (Date.now() - ms) / 1000;
@@ -397,16 +447,31 @@ function labelOption(value, suffix) {
     if (opt) opt.textContent = opt.textContent + ' (' + suffix + ')';
 }
 
+function selectDefaultRange() {
+    const select = document.getElementById('preset-select');
+    const defaultValue = Number.isFinite(DEFAULT_DAYS) && DEFAULT_DAYS >= 0 ? String(DEFAULT_DAYS) : '7';
+    let opt = select.querySelector(`option[value="${defaultValue}"]`);
+    if (!opt) {
+        opt = document.createElement('option');
+        opt.value = defaultValue;
+        opt.textContent = defaultValue === '1' ? '24 hours' : defaultValue + ' days';
+        select.insertBefore(opt, select.querySelector('option[value="0"]'));
+    }
+    select.value = defaultValue;
+}
+
 function initPresetLabels() {
     labelOption('-2', timeAgo(WAKE_MS));
     labelOption('-1', timeAgo(BOOT_MS));
     labelOption('1',  timeAgo(Date.now() - 86400e3));
     labelOption('7',  timeAgo(Date.now() - 7 * 86400e3));
+    selectDefaultRange();
 }
 
 const CATEGORIES = [
-    "Security", "Hardware & Power", "Core OS",
-    "Network", "Performance", "Antivirus & Defense", "Updates & Tasks"
+    "Security", "Hardware & Storage", "Crashes & Services",
+    "System", "Application", "Network",
+    "Performance", "Antivirus & Defense", "Updates & Tasks"
 ];
 
 function slug(s) { return s.replace(/[^a-z0-9]+/gi, '-').toLowerCase(); }
@@ -424,7 +489,7 @@ function buildGrid() {
             <div class="card-header" onclick="toggleCard('${slug(cat)}')">
                 <span class="card-title">${esc(cat)}</span>
                 <span class="card-status">Waiting</span>
-                <button class="card-run-btn" onclick="event.stopPropagation(); startCategoryCheck('${esc(cat)}', this)">&#9654; Start Check</button>
+                <button class="card-run-btn" onclick="event.stopPropagation(); startCategoryCheck('${esc(cat)}', this)">Start</button>
                 <span class="chevron">&#9660;</span>
             </div>
             <div class="card-body"></div>
@@ -467,6 +532,10 @@ function parseIssues(text) {
         .filter(i => i.event);
 }
 
+function isCleanText(text) {
+    return /^no issues found\.?$/i.test(String(text || '').trim());
+}
+
 function highestSeverity(issues) {
     if (issues.some(i => i.severity === 'CRITICAL')) return 'critical';
     if (issues.some(i => i.severity === 'HIGH'))     return 'high';
@@ -491,7 +560,7 @@ function renderIssues(text, rawEvents) {
     issues.sort((a, b) => (SEV_ORDER[a.severity] ?? 4) - (SEV_ORDER[b.severity] ?? 4));
     return issues.map(i => `
         <div class="issue ${i.severity}${isOlderThanWeek(i.date) ? ' old' : ''}"
-             data-raw="${esc(rawEvents || i.raw)}"
+             data-raw="${esc(i.raw)}"
              data-event="${esc(i.event)}" data-severity="${esc(i.severity)}"
              data-date="${esc(i.date)}" data-source="${esc(i.source)}"
              data-desc="${esc(i.description)}" data-action="${esc(i.action)}">
@@ -500,6 +569,7 @@ function renderIssues(text, rawEvents) {
                 <span class="issue-name">${esc(i.event)}</span>
                 ${i.date ? `<span class="issue-time">${esc(i.date)}</span>` : ''}
                 <span class="raw-icon" data-raw="${esc(i.raw)}"
+                      title="Show issue text"
                       onmouseenter="showRawTooltip(this)"
                       onmouseleave="scheduleHideTooltip()">{ }</span>
             </div>
@@ -507,15 +577,15 @@ function renderIssues(text, rawEvents) {
             ${i.description ? `<div class="issue-desc">${esc(i.description)}</div>` : ''}
             ${i.action      ? `<div class="issue-action">${esc(i.action)}</div>` : ''}
             <div class="ask-btns">
-                <button class="ask-btn ask-btn-info"   onclick="askLlm(this, 'In plain everyday language, what is this Windows event and what happened on my computer? No technical jargon.')">💡 What is this?</button>
-                <button class="ask-btn ask-btn-info"   onclick="askLlm(this, 'Give a technically precise explanation of this Windows event: what component generated it, what internal mechanism triggered it, what the event data fields mean, and how it relates to the Windows architecture. Target audience: experienced developer or sysadmin.', 'techie')">🔬 ELI the Techie</button>
-                <button class="ask-btn ask-btn-warn"   onclick="askLlm(this, 'How serious is this for a typical home user? Could it affect my files, privacy, or computer stability? Be honest and direct.')">⚠ How worried should I be?</button>
-                <button class="ask-btn ask-btn-action" onclick="askLlm(this, 'What is the single most important action I should take right now? Give me one clear, practical, safe next step — not a long list.')">→ What\'s my next step?</button>
-                <button class="ask-btn" onclick="toggleAskEditor(this)">✎ Ask your own…</button>
+                <button class="ask-btn ask-btn-info"   onclick="askLlm(this, 'In plain everyday language, what is this Windows event and what happened on my computer? No technical jargon.')">Explain</button>
+                <button class="ask-btn ask-btn-info"   onclick="askLlm(this, 'Give a technically precise explanation of this Windows event: what component generated it, what internal mechanism triggered it, what the event data fields mean, and how it relates to the Windows architecture. Target audience: experienced developer or sysadmin.', 'techie')">Technical</button>
+                <button class="ask-btn ask-btn-warn"   onclick="askLlm(this, 'How serious is this for a typical home user? Could it affect my files, privacy, or computer stability? Be honest and direct.')">Risk</button>
+                <button class="ask-btn ask-btn-action" onclick="askLlm(this, 'What is the single most important action I should take right now? Give me one clear, practical, safe next step - not a long list.')">Next step</button>
+                <button class="ask-btn" onclick="toggleAskEditor(this)">Ask</button>
             </div>
             <div class="ask-editor">
                 <textarea class="ask-input" rows="2"
-                    placeholder="Type your question… (Ctrl+Enter to send, Esc to cancel)"
+                    placeholder="Type your question... (Ctrl+Enter to send, Esc to cancel)"
                     onkeydown="handleAskKey(event, this)"></textarea>
                 <div class="ask-editor-row">
                     <button class="ask-submit" onclick="submitCustomAsk(this)">Ask</button>
@@ -558,7 +628,7 @@ function renderMarkdown(text) {
 
 let activeEs = null;
 
-// ── Raw-output tooltip ────────────────────────────────────────────────────────
+// Raw-output tooltip
 const rawTooltip    = document.getElementById('raw-tooltip');
 const rawTooltipTxt = document.getElementById('raw-tooltip-content');
 let   tooltipTimer  = null;
@@ -585,7 +655,6 @@ function scheduleHideTooltip() {
 
 rawTooltip.addEventListener('mouseenter', () => clearTimeout(tooltipTimer));
 rawTooltip.addEventListener('mouseleave', scheduleHideTooltip);
-// ─────────────────────────────────────────────────────────────────────────────
 
 
 function toggleAskEditor(btn) {
@@ -623,11 +692,11 @@ function askLlm(btn, question, persona) {
     const issue = btn.closest('.issue');
     const issueText = '````\n' + (issue.dataset.raw || '') + '\n````';
 
-    document.getElementById('status-bar').textContent = 'Asking AI — please wait…';
+    document.getElementById('status-bar').textContent = 'Asking AI - please wait...';
 
     issue.querySelectorAll('.ask-btn').forEach(b => b.disabled = true);
     const resp = issue.querySelector('.ai-response');
-    resp.innerHTML = 'Asking AI…';
+    resp.innerHTML = 'Asking AI...';
     resp.className = 'ai-response loading visible';
 
     const payload = { issue: issueText, question: question };
@@ -640,7 +709,7 @@ function askLlm(btn, question, persona) {
     })
     .then(r => r.json())
     .then(data => {
-        const disclaimer = '<p style="color:#f85149;font-size:0.70rem;margin-bottom:7px;">⚠ AI-generated — may be incorrect. Verify before acting on any advice.</p>';
+        const disclaimer = '<p style="color:#f85149;font-size:0.70rem;margin-bottom:7px;">AI-generated - may be incorrect. Verify before acting on any advice.</p>';
         resp.innerHTML = disclaimer + renderMarkdown(data.text || 'No response received.');
         resp.className = 'ai-response visible';
         issue.querySelectorAll('.ask-btn').forEach(b => b.disabled = false);
@@ -658,20 +727,41 @@ function setCardRunBtnsDisabled(on) {
     document.querySelectorAll('.card-run-btn').forEach(b => b.disabled = on);
 }
 
+function initLlmState() {
+    if (!LLM_READY) {
+        document.body.classList.add('llm-offline');
+        document.getElementById('btn-start').disabled = true;
+        setCardRunBtnsDisabled(true);
+        document.getElementById('status-bar').textContent = 'LLM offline - start the local server and refresh this page.';
+    }
+}
+
 function startCategoryCheck(cat, btn) {
+    if (!LLM_READY) {
+        document.getElementById('status-bar').textContent = 'LLM offline - start the local server and refresh this page.';
+        return;
+    }
     if (activeEs) return;
-    btn.disabled = true;
-    btn.textContent = '…';
+    const mainBtn = document.getElementById('btn-start');
+    btn.textContent = 'Running...';
+    mainBtn.disabled = true;
+    setPresetsDisabled(true);
+    setCardRunBtnsDisabled(true);
     const days = activePresetDays();
     const es = new EventSource('/stream?days=' + days + '&category=' + encodeURIComponent(cat));
+    activeEs = es;
 
     es.onmessage = e => {
         const msg = JSON.parse(e.data);
         if (msg.type === 'start') {
-            setCard(msg.category, 'analyzing', 'Analyzing…');
+            setCard(msg.category, 'analyzing', 'Analyzing...');
             document.getElementById('status-bar').textContent = 'Analyzing: ' + msg.category;
+        } else if (msg.type === 'progress') {
+            const progress = msg.current + '/' + msg.total;
+            setCard(msg.category, 'analyzing', 'Analyzing ' + progress);
+            document.getElementById('status-bar').textContent = 'Analyzing: ' + msg.category + ' ' + progress;
         } else if (msg.type === 'result') {
-            if (msg.clean) {
+            if (msg.clean || isCleanText(msg.text)) {
                 setCard(msg.category, 'clean', 'Clean', '<div class="clean-msg">&#10003; No issues found</div>');
             } else if (msg.error) {
                 setCard(msg.category, 'llm-error', 'LLM error', `<div class="error-msg">${esc(msg.text)}</div>`);
@@ -682,25 +772,35 @@ function startCategoryCheck(cat, btn) {
                 setCard(msg.category, sev, label, renderIssues(msg.text, msg.raw));
             }
         } else if (msg.type === 'done') {
+            activeEs = null;
             es.close();
-            btn.disabled = false;
-            btn.textContent = '↻ Re-run';
-            document.getElementById('status-bar').textContent = cat + ' — check complete';
+            btn.textContent = 'Re-run';
+            mainBtn.disabled = false;
+            setPresetsDisabled(false);
+            setCardRunBtnsDisabled(false);
+            document.getElementById('status-bar').textContent = cat + ' - check complete';
         }
     };
 
     es.onerror = () => {
+        activeEs = null;
         es.close();
-        btn.disabled = false;
-        btn.textContent = '↻ Re-run';
-        document.getElementById('status-bar').textContent = 'Connection lost — is the server still running?';
+        btn.textContent = 'Re-run';
+        mainBtn.disabled = false;
+        setPresetsDisabled(false);
+        setCardRunBtnsDisabled(false);
+        document.getElementById('status-bar').textContent = 'Connection lost - is the server still running?';
     };
 }
 
 function startCheck() {
+    if (!LLM_READY) {
+        document.getElementById('status-bar').textContent = 'LLM offline - start the local server and refresh this page.';
+        return;
+    }
     const btn = document.getElementById('btn-start');
     btn.disabled = true;
-    btn.textContent = 'RUNNING…';
+    btn.textContent = 'Running...';
     document.getElementById('note').textContent = '';
     buildGrid();
 
@@ -715,11 +815,16 @@ function startCheck() {
         const msg = JSON.parse(e.data);
 
         if (msg.type === 'start') {
-            setCard(msg.category, 'analyzing', 'Analyzing…');
+            setCard(msg.category, 'analyzing', 'Analyzing...');
             document.getElementById('status-bar').textContent = 'Analyzing: ' + msg.category;
 
+        } else if (msg.type === 'progress') {
+            const progress = msg.current + '/' + msg.total;
+            setCard(msg.category, 'analyzing', 'Analyzing ' + progress);
+            document.getElementById('status-bar').textContent = 'Analyzing: ' + msg.category + ' ' + progress;
+
         } else if (msg.type === 'result') {
-            if (msg.clean) {
+            if (msg.clean || isCleanText(msg.text)) {
                 setCard(msg.category, 'clean', 'Clean', '<div class="clean-msg">&#10003; No issues found</div>');
             } else if (msg.error) {
                 setCard(msg.category, 'llm-error', 'LLM error', `<div class="error-msg">${esc(msg.text)}</div>`);
@@ -729,17 +834,17 @@ function startCheck() {
                 const label = issues.length ? issues.length + ' issue' + (issues.length > 1 ? 's' : '') : 'Issues';
                 setCard(msg.category, sev, label, renderIssues(msg.text, msg.raw));
             }
-            done++;
+            if (msg.final !== false) done++;
 
         } else if (msg.type === 'done') {
             activeEs = null;
             es.close();
             btn.disabled = false;
-            btn.textContent = 'RUN AGAIN';
+            btn.textContent = 'Run again';
             setPresetsDisabled(false);
             setCardRunBtnsDisabled(false);
             const label = days == 0 ? 'all time' : days == -2 ? 'since last wake' : days == -1 ? 'since last boot' : days == 1 ? 'last 24 hours' : 'last ' + days + ' days';
-            document.getElementById('status-bar').textContent = 'Check complete — ' + done + ' categories analyzed (' + label + ')';
+            document.getElementById('status-bar').textContent = 'Check complete - ' + done + ' categories analyzed (' + label + ')';
             document.getElementById('note').textContent =
                 'NOTE: Suggested actions are recommendations only and not guaranteed solutions. ' +
                 'Review carefully before applying any changes to your system.';
@@ -750,15 +855,16 @@ function startCheck() {
         activeEs = null;
         es.close();
         btn.disabled = false;
-        btn.textContent = 'RETRY';
+        btn.textContent = 'Retry';
         setPresetsDisabled(false);
         setCardRunBtnsDisabled(false);
-        document.getElementById('status-bar').textContent = 'Connection lost — is the server still running?';
+        document.getElementById('status-bar').textContent = 'Connection lost - is the server still running?';
     };
 }
 
 buildGrid();
 initPresetLabels();
+initLlmState();
 </script>
 </body>
 </html>
